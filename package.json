@@ -1,0 +1,19 @@
+{
+  "name": "danime-party",
+  "version": "0.0.0",
+  "scripts": {
+    "build": "webpack",
+    "build:watch": "webpack --watch"
+  },
+  "dependencies": {
+    "@types/chrome": "0.0.120",
+    "preact": "^10.4.5",
+    "ts-loader": "^8.0.0",
+    "typescript": "^3.9.6",
+    "webpack": "^4.43.0"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^6.0.3",
+    "webpack-cli": "^3.3.12"
+  }
+}
