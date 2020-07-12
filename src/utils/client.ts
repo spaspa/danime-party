@@ -7,7 +7,8 @@ import {
   messageSync,
   messagePlay,
   messagePause,
-  messageReady
+  messageReady,
+  commandPause
 } from './constants'
 
 export enum ClientReadyState {
@@ -24,6 +25,9 @@ export default class Client {
   private timeDiff = 0
 
   private dispatchQueue: string[] = []
+
+  // recently sent pause message
+  private preventSendReady = false
 
   readyState: ClientReadyState = ClientReadyState.unsent
 
@@ -42,7 +46,7 @@ export default class Client {
       const data = e.data.split(':')
       const message = data[0]
       if (message === messageSync) this.onSync(data)
-      if (message === messagePlay) this.onStart(data)
+      if (message === messagePlay) this.onPlay(data)
       if (message === messagePause) this.onPause(data)
       if (message === messageReady) this.onReady(data)
     })
@@ -86,6 +90,16 @@ export default class Client {
       return
     }
     this.sendCommand(commandPlay)
+    this.preventSendReady = false
+  }
+
+  sendPause() {
+    if (this.readyState !== ClientReadyState.playing) {
+      return
+    }
+    this.sendCommand(commandPause)
+    this.sendReady(false)
+    this.preventSendReady = true
   }
 
   private onSync(data: string[]) {
@@ -94,17 +108,21 @@ export default class Client {
     this.readyState = ClientReadyState.synced
   }
 
-  private onStart(data: string[]) {
+  private onPlay(data: string[]) {
     const serverTime = parseFloat(data[1])
     const startTime = serverTime + this.timeDiff
     setTimeout(() => {
       this.playHandler()
       this.readyState = ClientReadyState.playing
     }, Date.now() / 1000 - startTime)
+    this.preventSendReady = false
   }
   private onPause(_: string[]) {
     this.pauseHandler()
     this.readyState = ClientReadyState.ready
+    if (!this.preventSendReady) {
+      this.sendReady(true)
+    }
   }
   private onReady(_: string[]) {
     this.sendPlay()
