@@ -1,5 +1,5 @@
 import Client, {ClientReadyState} from '../../utils/client'
-import {lsKeyPageType, lsRoomId} from '../../utils/constants'
+import {lsKeyPageType, lsRoomId, lsPath} from '../../utils/constants'
 import {injectButton} from './buttonInjector'
 import {simpleRandomStr} from '../../utils/random'
 import {getItem, setItem} from '../../utils/contentLocalStorage'
@@ -20,6 +20,15 @@ const main = async () => {
   if (!video) return
 
   window.addEventListener("beforeunload", () => leave(client))
+
+  const roomId = (await getItem(lsRoomId))
+  if (!roomId) {
+    console.error("No room id specified")
+  }
+  const path = (await getItem(lsPath))
+  if (!path) {
+    console.error("No path specified")
+  }
 
   let didLoaded = false
   let didInteracted = false
@@ -52,8 +61,6 @@ const main = async () => {
     },
   )
 
-  const roomId = (await getItem(lsRoomId)) ?? simpleRandomStr()
-  setItem(lsRoomId, roomId)
   client.sendJoin(roomId)
 
   video.addEventListener('loadstart', () => {
