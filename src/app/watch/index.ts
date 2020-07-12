@@ -3,23 +3,27 @@ import {lsKeyPageType, lsRoomId} from '../../utils/constants'
 import {injectButton} from './buttonInjector'
 import {simpleRandomStr} from '../../utils/random'
 import {getItem, setItem} from '../../utils/contentLocalStorage'
+import {adjustDisplay} from './adjustDisplay'
 
 const events = [
   "play",
   "pause",
   "seeked",
   "seeking",
-  "loadstart"
+  "loadstart",
+  "stall",
+  "waiting"
 ]
 
 const main = async () => {
-  const video = document.querySelector('video')
+  let video = document.querySelector('video') as HTMLVideoElement  //unsafe
   if (!video) return
 
   window.addEventListener("beforeunload", () => leave(client))
 
   let didLoaded = false
   let didInteracted = false
+  let allClientReady = false
 
   video.autoplay = false
   video.muted = true
@@ -28,48 +32,97 @@ const main = async () => {
 
   injectButton(() => {
     didInteracted = true
-    if (didLoaded) {
-      sendReady(client)
-    }
+    client.sendReady(didLoaded)
   })
+  adjustDisplay()
 
   const client = new Client(
-    () => video.play(),
+    () => video.currentTime,
+    () => {
+      allClientReady = true
+      video.play()
+    },
     () => video.pause(),
+    (videoTime: number) => {
+      if (Math.abs(video.currentTime - videoTime) > 0.1) {
+        video.currentTime = videoTime
+        return true
+      }
+      return false
+    },
   )
 
   const roomId = (await getItem(lsRoomId)) ?? simpleRandomStr()
   setItem(lsRoomId, roomId)
-  console.log(`room id: ${roomId}`)
   client.sendJoin(roomId)
 
-  client.sendSync()
+  video.addEventListener('loadstart', () => {
+    didLoaded = false
+    allClientReady = false
+    video.pause()
+    client.sendReady(false)
+    client.sendSync()
+  })
 
-  video.addEventListener("loadeddata", () => {
+  video.addEventListener("canplay", () => {
+    didLoaded = true
     video.pause()
     video.muted = false
-    didLoaded = true
-    if (didInteracted) {
-      sendReady(client)
+  })
+
+  video.addEventListener('play', () => {
+    if (!didLoaded || !allClientReady) {
+      return
+    }
+    if (!didInteracted) {
+      video.pause()
+    }
+    if (client.readyState === ClientReadyState.userStop) {
+      video.pause()
+      client.sendReady(true)
     }
   })
 
   video.addEventListener('pause', () => {
+    if (!didLoaded) {
+      return
+    }
+    if (client.readyState !== ClientReadyState.playing) {
+      return
+    }
+    console.log('will send pause')
+    client.interacted = true
     client.sendPause()
   })
 
-  events.forEach(event => {
-    video.addEventListener(event, () => console.log(event))
+  video.addEventListener('seeking', () => {
+    if (!didLoaded) {
+      return
+    }
+    if (client.readyState !== ClientReadyState.playing && client.readyState !== ClientReadyState.userStop) {
+      return
+    }
+    console.log('will send pause to seek')
+    client.interacted = true
+    client.sendPause()
+  })
+
+  video.addEventListener('seeked', () => {
+    if (!didLoaded) {
+      return
+    }
+    if (client.readyState !== ClientReadyState.userStop) {
+      client.sendReady(true)
+      return
+    }
+    console.log('will send seek')
+    client.sendSeek(video.currentTime)
   })
 }
 
 const leave = (client: Client) => {
   localStorage.setItem(lsKeyPageType, "other")
   client.sendLeave()
-}
-
-const sendReady = (client: Client) => {
-  client.sendReady(true)
 }
 
 export default main

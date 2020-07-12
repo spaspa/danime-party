@@ -8,7 +8,9 @@ import {
   messagePlay,
   messagePause,
   messageReady,
-  commandPause
+  commandPause,
+  commandSeek,
+  messageSeek
 } from './constants'
 
 export enum ClientReadyState {
@@ -17,7 +19,8 @@ export enum ClientReadyState {
   syncing = 2,
   synced = 3,
   ready = 4,
-  playing = 5
+  userStop = 5,
+  playing = 6
 }
 
 export default class Client {
@@ -26,15 +29,16 @@ export default class Client {
 
   private dispatchQueue: string[] = []
 
-  // recently sent pause message
-  private preventSendReady = false
+  interacted = false
 
   readyState: ClientReadyState = ClientReadyState.unsent
 
   constructor(
+    readonly videoTimeGetter: () => number,
     readonly playHandler: () => void,
     readonly pauseHandler: () => void,
-    readonly path = "ws://localhost:8080/ws"
+    readonly seekHandler: (videoTime: number) => boolean,
+    readonly path = "wss://localhost:8080/ws"
   ) {
     this.ws = new WebSocket(path)
     this.setupListerner()
@@ -48,6 +52,7 @@ export default class Client {
       if (message === messageSync) this.onSync(data)
       if (message === messagePlay) this.onPlay(data)
       if (message === messagePause) this.onPause(data)
+      if (message === messageSeek) this.onSeek(data)
       if (message === messageReady) this.onReady(data)
     })
     this.ws.addEventListener("open", () => {
@@ -85,21 +90,33 @@ export default class Client {
     this.readyState = ClientReadyState.ready
   }
 
-  sendPlay() {
+  sendPlay(videoTime = 0) {
     if (this.readyState !== ClientReadyState.ready) {
       return
     }
-    this.sendCommand(commandPlay)
-    this.preventSendReady = false
+    this.sendCommand(commandPlay, videoTime.toString())
   }
 
   sendPause() {
-    if (this.readyState !== ClientReadyState.playing) {
+    if (this.readyState !== ClientReadyState.playing && this.readyState !== ClientReadyState.userStop) {
       return
     }
+    this.readyState = ClientReadyState.userStop
     this.sendCommand(commandPause)
-    this.sendReady(false)
-    this.preventSendReady = true
+  }
+
+  sendSeek(videoTime: number) {
+    if (this.interacted) {
+      this.sendCommand(commandSeek, `${videoTime}`)
+    }
+  }
+
+  private playVideo(serverTime: number) {
+    const startTime = serverTime + this.timeDiff
+    setTimeout(() => {
+      this.playHandler()
+      this.readyState = ClientReadyState.playing
+    }, Date.now() / 1000 - startTime)
   }
 
   private onSync(data: string[]) {
@@ -109,22 +126,34 @@ export default class Client {
   }
 
   private onPlay(data: string[]) {
-    const serverTime = parseFloat(data[1])
-    const startTime = serverTime + this.timeDiff
-    setTimeout(() => {
-      this.playHandler()
-      this.readyState = ClientReadyState.playing
-    }, Date.now() / 1000 - startTime)
-    this.preventSendReady = false
+    this.readyState = ClientReadyState.playing
+    const videoTime = parseFloat(data[1])
+    const serverTime = parseFloat(data[2])
+    this.seekHandler(videoTime)
+    this.playVideo(serverTime)
+    this.interacted = false
   }
   private onPause(_: string[]) {
     this.pauseHandler()
-    this.readyState = ClientReadyState.ready
-    if (!this.preventSendReady) {
+    if (this.interacted) {
+      this.sendReady(false)
+      this.readyState = ClientReadyState.userStop
+    } else {
       this.sendReady(true)
+      this.readyState = ClientReadyState.ready
+    }
+  }
+  private onSeek(data: string[]) {
+    this.pauseHandler()
+    const videoTime = parseFloat(data[1])
+    if (this.seekHandler(videoTime)) {
+      this.readyState = ClientReadyState.synced
+    }
+    else if (this.readyState !== ClientReadyState.userStop) {
+      this.sendReady(false)
     }
   }
   private onReady(_: string[]) {
-    this.sendPlay()
+    this.sendPlay(this.videoTimeGetter())
   }
 }

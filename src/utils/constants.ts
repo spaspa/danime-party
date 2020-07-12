@@ -18,3 +18,4 @@ export const messageReady = "ready"
 
 export const lsKeyPageType = "pageType"
 export const lsRoomId = "roomId"
+export const lsPath = "path"
