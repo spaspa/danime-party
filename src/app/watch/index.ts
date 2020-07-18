@@ -1,8 +1,7 @@
 import Client, {ClientReadyState} from '../../utils/client'
 import {lsKeyPageType, lsRoomId, lsPath} from '../../utils/constants'
 import {injectButton} from './buttonInjector'
-import {simpleRandomStr} from '../../utils/random'
-import {getItem, setItem} from '../../utils/contentLocalStorage'
+import {getItem} from '../../utils/contentLocalStorage'
 import {adjustDisplay} from './adjustDisplay'
 
 const events = [
@@ -59,6 +58,7 @@ const main = async () => {
       }
       return false
     },
+    path
   )
 
   client.sendJoin(roomId)
@@ -81,12 +81,13 @@ const main = async () => {
     if (!didLoaded || !allClientReady) {
       return
     }
+    console.log(didInteracted, client.readyState)
     if (!didInteracted) {
       video.pause()
     }
     if (client.readyState === ClientReadyState.userStop) {
-      video.pause()
       client.sendReady(true)
+      video.pause()
     }
   })
 

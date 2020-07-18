@@ -1,11 +1,3 @@
-export const commandPlay = "play!"
-export const commandPause = "pause!"
-export const commandSeek = "seek!"
-export const commandSync = "sync"
-export const commandJoin = "join"
-export const commandLeave = "leave"
-export const commandReady = "ready"
-
 export const messageOk = "OK"
 export const messageAccept = "accept"
 export const messageSync = "sync"
@@ -27,6 +19,4 @@ export type ServerMessageEventType =
     | typeof messageSeek
     | typeof messageReady
 
-export const lsKeyPageType = "pageType"
-export const lsRoomId = "roomId"
-export const lsPath = "path"
+// TODO: Server Message Parser

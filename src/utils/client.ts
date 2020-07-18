@@ -38,7 +38,7 @@ export default class Client {
     readonly playHandler: () => void,
     readonly pauseHandler: () => void,
     readonly seekHandler: (videoTime: number) => boolean,
-    readonly path = "wss://localhost:8080/ws"
+    readonly path = "ws://localhost:8080/ws"
   ) {
     this.ws = new WebSocket(path)
     this.setupListerner()
@@ -49,11 +49,13 @@ export default class Client {
       console.log(`message: ${e.data}`)
       const data = e.data.split(':')
       const message = data[0]
+      const currentReady = this.readyState
       if (message === messageSync) this.onSync(data)
       if (message === messagePlay) this.onPlay(data)
       if (message === messagePause) this.onPause(data)
       if (message === messageSeek) this.onSeek(data)
       if (message === messageReady) this.onReady(data)
+      console.log(`readyState: ${currentReady}->${this.readyState}`)
     })
     this.ws.addEventListener("open", () => {
       this.dispatchQueue.forEach(c => this.ws.send(c))
@@ -61,11 +63,13 @@ export default class Client {
   }
 
   private sendCommand(...commands: string[]) {
+    const command = commands.join(":")
+    console.log('command:', command)
     if (this.ws.readyState < WebSocket.OPEN) {
-      this.dispatchQueue.push(commands.join(":"))
+      this.dispatchQueue.push(command)
     }
     else {
-      this.ws.send(commands.join(":"))
+      this.ws.send(command)
     }
   }
 
@@ -87,11 +91,15 @@ export default class Client {
 
   sendReady(ready: boolean) {
     this.sendCommand(commandReady, String(ready))
-    this.readyState = ClientReadyState.ready
+    if (!ready) {
+      this.readyState = ClientReadyState.synced
+    } else if (this.readyState < ClientReadyState.ready) {
+      this.readyState = ClientReadyState.ready
+    }
   }
 
   sendPlay(videoTime = 0) {
-    if (this.readyState !== ClientReadyState.ready) {
+    if (this.readyState < ClientReadyState.ready) {
       return
     }
     this.sendCommand(commandPlay, videoTime.toString())
@@ -121,7 +129,6 @@ export default class Client {
 
   private onSync(data: string[]) {
     this.timeDiff = parseFloat(data[1])
-    console.log(`Time diff set: ${this.timeDiff}`)
     this.readyState = ClientReadyState.synced
   }
 
@@ -135,13 +142,8 @@ export default class Client {
   }
   private onPause(_: string[]) {
     this.pauseHandler()
-    if (this.interacted) {
-      this.sendReady(false)
-      this.readyState = ClientReadyState.userStop
-    } else {
-      this.sendReady(true)
-      this.readyState = ClientReadyState.ready
-    }
+    this.readyState = ClientReadyState.userStop
+    this.sendReady(!this.interacted)
   }
   private onSeek(data: string[]) {
     this.pauseHandler()

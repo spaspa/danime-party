@@ -13,6 +13,8 @@ const Lobby = () => {
     (async () => {
       const id = (await getItem(lsRoomId)) ?? ""
       setRoomId(id)
+      const path = (await getItem(lsPath)) ?? "ws://localhost:8080/ws"
+      setPath(path)
     })()
   }, [])
 
