@@ -36,24 +36,22 @@ const main = async () => {
   video.currentTime = 0
   video.pause()
 
+  const client = new Client(roomId, video, path)
+  client.start()
+
   injectButton(() => {
-    didInteracted = true
-    // FIXME: No method
-    // client.sendReady(didLoaded)
+    if (!didInteracted) {
+      client.interacted()
+      didInteracted = true
+    } 
   })
   adjustDisplay()
-
-  const client = new Client(video, path)
-
-  // FIXME: No method
-  // client.sendJoin(roomId)
 
 }
 
 const leave = (client: Client) => {
   localStorage.setItem(lsKeyPageType, "other")
-  // FIXME: No Method
-  // client.sendLeave()
+  client.leave()
 }
 
 export default main

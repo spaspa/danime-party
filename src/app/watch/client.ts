@@ -1,6 +1,6 @@
 import { ClientState, reduceState } from "./clientStateReducer"
 import { parseServerMessage } from './messageEvents'
-import { CommandType, commandReady, commandJoin, commandLeave, commandPlay, commandPause, commandSeek } from '../../utils/constants'
+import { CommandType, commandReady, commandJoin, commandLeave, commandPlay, commandPause, commandSeek, commandSync } from '../../utils/constants'
 
 export class ClientEventEmitter {
     private dispatchQueue: string[] = []
@@ -13,7 +13,7 @@ export class ClientEventEmitter {
         })
     }
     private sendCommand(command: CommandType , ...args: string[]) {
-        const payload = args.join(":")
+        const payload = [command, ...args].join(":")
         console.log('command:', payload)
         if (this.ws.readyState < WebSocket.OPEN) {
             this.dispatchQueue.push(payload)
@@ -28,6 +28,9 @@ export class ClientEventEmitter {
         // return Math.abs(this.video.currentTime - time) < 0.1 ? then() : otherwise()
     }
 
+    sendSync() {
+        this.sendCommand(commandSync, ((new Date()).getTime() / 1000).toString())
+    }
     sendJoin(roomId: string) {
         this.sendCommand(commandJoin, roomId)
     }
@@ -66,12 +69,14 @@ export class Client {
     private emitter: ClientEventEmitter
 
     constructor(
+        private roomName: string,
         private video: HTMLVideoElement,
         readonly path = "ws://localhost:8080/ws"
     ) {
         this.ws = new WebSocket(path)
         this.emitter = new ClientEventEmitter(video, this.ws)
         this.setupVideoEvents()
+        this.setupWebSocketEvents()
     }
 
     private state: ClientState = {
@@ -81,12 +86,14 @@ export class Client {
 
     setupVideoEvents() {
         (["play", "pause", "seeking", "seeked"] as const).forEach(e => this.video.addEventListener(e, () => {
+            console.log('video:', e)
             this.state = reduceState(this.state, { type: "video", event: e }, this.emitter)
         }))
     }
 
     setupWebSocketEvents() {
         this.ws.addEventListener("message", e => {
+            console.log('message:', e.data)
             this.state = reduceState(
                 this.state,
                 { type: "message", event: parseServerMessage(e.data) },
@@ -95,4 +102,27 @@ export class Client {
         })
     }
 
+    start() {
+        this.state = reduceState(
+            this.state,
+            { type: "start", roomName: this.roomName },
+            this.emitter
+        )
+    }
+
+    interacted() {
+        this.state = reduceState(
+            this.state,
+            { type: "interaction" },
+            this.emitter
+        )
+    }
+
+    leave() {
+        this.emitter.sendLeave()
+        this.state = {
+            type: "unsent",
+            timeDiff: 0
+        }
+    }
 }

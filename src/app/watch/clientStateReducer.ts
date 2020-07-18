@@ -1,8 +1,10 @@
 import { ServerMessageEvent } from './messageEvents'
 import { ClientEventEmitter } from './client'
 
-type ClientStateType = "unsent" | "joined" | "syncing" | "synced" | "ready" | "playing" | "stopped" | "seeking"
+type ClientStateType = ClientStateTypeWithoutArg | ClientStateWithArg["type"]
 type ClientStateTypeWithoutArg = "unsent" | "joined" | "syncing" | "synced" | "ready" | "playing"
+
+type ClientStateWithArg = ClientControlState
 type ClientStateWithoutArg = {
     type: ClientStateTypeWithoutArg
     timeDiff: number
@@ -20,6 +22,8 @@ type VideoEvent = "play" | "pause" | "seeking" | "seeked"
 type ClientEvent =
     | { type: "video", event: VideoEvent }
     | { type: "message", event: ServerMessageEvent }
+    | { type: "interaction" }
+    | { type: "start", roomName: string }
 
 type ClientReducerMap = {
     [T in ClientStateType]: (
@@ -30,15 +34,30 @@ type ClientReducerMap = {
 }
 const clientReducerMap: ClientReducerMap = {
     unsent (state, event, emitter) {
+        if (event.type === "start") {
+            emitter.sendJoin(event.roomName)
+            return { ...state, type: "joined" }
+        }
         return state
     },
     joined (state, event, emitter) {
+        if (event.type === "message" && event.event.type === "accept") {
+            emitter.sendSync()
+            return { ...state, type: "syncing" }
+        }
         return state
     },
-    syncing (state, event, emitter) {
+    syncing (state, event, _) {
+        if (event.type === "message" && event.event.type === "sync") {
+            return { type: "synced", timeDiff: event.event.timeDiff }
+        }
         return state
     },
     synced (state, event, emitter) {
+        if (event.type === "interaction") {
+            emitter.sendReady(true)
+            return { ...state, type: "ready" }
+        }
         return state
     },
     ready (state, event, emitter) {
@@ -77,7 +96,7 @@ const clientReducerMap: ClientReducerMap = {
             return { type: "ready", timeDiff: state.timeDiff }
         }
         if (!state.controlled && event.type === "video" && event.event === "pause") {
-            emitter.reduceToStateIfVideoTimeIsAround(
+            return emitter.reduceToStateIfVideoTimeIsAround(
                 0, // FIXME put correct time from pause event
                 () => {
                     emitter.sendReady(true)
@@ -105,5 +124,7 @@ const clientReducerMap: ClientReducerMap = {
     },
 }
 export const reduceState = (state: ClientState, event: ClientEvent, emitter: ClientEventEmitter) => {
-    return clientReducerMap[state.type](state as any, event, emitter) as ClientState
+    const result = clientReducerMap[state.type](state as any, event, emitter) as ClientState
+    console.log(state, "->", result, "@", event)
+    return result
 }
