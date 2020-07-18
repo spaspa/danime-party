@@ -1,4 +1,4 @@
-import Client, {ClientReadyState} from '../../utils/client'
+import { Client } from './client'
 import {lsKeyPageType, lsRoomId, lsPath} from '../../utils/constants'
 import {injectButton} from './buttonInjector'
 import {getItem} from '../../utils/contentLocalStorage'
@@ -29,9 +29,7 @@ const main = async () => {
     console.error("No path specified")
   }
 
-  let didLoaded = false
   let didInteracted = false
-  let allClientReady = false
 
   video.autoplay = false
   video.muted = true
@@ -40,97 +38,22 @@ const main = async () => {
 
   injectButton(() => {
     didInteracted = true
-    client.sendReady(didLoaded)
+    // FIXME: No method
+    // client.sendReady(didLoaded)
   })
   adjustDisplay()
 
-  const client = new Client(
-    () => video.currentTime,
-    () => {
-      allClientReady = true
-      video.play()
-    },
-    () => video.pause(),
-    (videoTime: number) => {
-      if (Math.abs(video.currentTime - videoTime) > 0.1) {
-        video.currentTime = videoTime
-        return true
-      }
-      return false
-    },
-    path
-  )
+  const client = new Client(video, path)
 
-  client.sendJoin(roomId)
+  // FIXME: No method
+  // client.sendJoin(roomId)
 
-  video.addEventListener('loadstart', () => {
-    didLoaded = false
-    allClientReady = false
-    video.pause()
-    client.sendReady(false)
-    client.sendSync()
-  })
-
-  video.addEventListener("canplay", () => {
-    didLoaded = true
-    video.pause()
-    video.muted = false
-  })
-
-  video.addEventListener('play', () => {
-    if (!didLoaded || !allClientReady) {
-      return
-    }
-    console.log(didInteracted, client.readyState)
-    if (!didInteracted) {
-      video.pause()
-    }
-    if (client.readyState === ClientReadyState.userStop) {
-      client.sendReady(true)
-      video.pause()
-    }
-  })
-
-  video.addEventListener('pause', () => {
-    if (!didLoaded) {
-      return
-    }
-    if (client.readyState !== ClientReadyState.playing) {
-      return
-    }
-    console.log('will send pause')
-    client.interacted = true
-    client.sendPause()
-  })
-
-  video.addEventListener('seeking', () => {
-    if (!didLoaded) {
-      return
-    }
-    if (client.readyState !== ClientReadyState.playing && client.readyState !== ClientReadyState.userStop) {
-      return
-    }
-    console.log('will send pause to seek')
-    client.interacted = true
-    client.sendPause()
-  })
-
-  video.addEventListener('seeked', () => {
-    if (!didLoaded) {
-      return
-    }
-    if (client.readyState !== ClientReadyState.userStop) {
-      client.sendReady(true)
-      return
-    }
-    console.log('will send seek')
-    client.sendSeek(video.currentTime)
-  })
 }
 
 const leave = (client: Client) => {
   localStorage.setItem(lsKeyPageType, "other")
-  client.sendLeave()
+  // FIXME: No Method
+  // client.sendLeave()
 }
 
 export default main
