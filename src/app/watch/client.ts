@@ -1,4 +1,4 @@
-import { ClientState, reduceState } from "./clientStateReducer"
+import { ClientState, ClientEvent, reduceState } from "./clientStateReducer"
 import { parseServerMessage } from './messageEvents'
 import { CommandType, commandReady, commandJoin, commandLeave, commandPlay, commandPause, commandSeek, commandSync, commandResume } from '../../utils/constants'
 
@@ -69,7 +69,9 @@ export class ClientEventEmitter {
 
 export class Client {
     private ws: WebSocket
-    private emitter: ClientEventEmitter
+    readonly emitter: ClientEventEmitter
+
+    public onStateChange?: (newState: ClientState, prevState: ClientState) => void
 
     constructor(
         private roomName: string,
@@ -90,19 +92,21 @@ export class Client {
     setupVideoEvents() {
         (["play", "pause", "seeking", "seeked"] as const).forEach(e => this.video.addEventListener(e, () => {
             console.log('video:', e)
-            this.state = reduceState(this.state, { type: "video", event: e }, this.emitter)
+            this.updateStateWith({ type: "video", event: e })
         }))
     }
 
     setupWebSocketEvents() {
         this.ws.addEventListener("message", e => {
             console.log('message:', e.data)
-            this.state = reduceState(
-                this.state,
-                { type: "message", event: parseServerMessage(e.data) },
-                this.emitter
-            )
+            this.updateStateWith({ type: "message", event: parseServerMessage(e.data) })
         })
+    }
+
+    updateStateWith(event: ClientEvent) {
+        const newState = reduceState(this.state, event, this.emitter)
+        this.onStateChange && this.onStateChange(newState, this.state)
+        this.state = newState
     }
 
     start() {
@@ -128,4 +132,21 @@ export class Client {
             timeDiff: 0
         }
     }
+
+    static typeOfState(state: ClientState): StateType {
+        if (
+            state.type === "unsent"
+            || state.type === "joined"
+            || state.type === "syncing"
+            || state.type === "synced"
+        ) {
+            return "nonReady"
+        }
+        if (state.type === "playing" || state.type === "stopped" && state.controlled) {
+            return "controllable"
+        }
+        return "waiting"
+    }
 }
+
+export type StateType = "nonReady" | "controllable" | "waiting"

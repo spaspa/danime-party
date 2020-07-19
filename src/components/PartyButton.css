@@ -1,11 +1,26 @@
-.party {
+.partyButton {
   cursor: pointer;
   background-position: center;
   background-size: 80%;
   background-repeat: no-repeat;
-  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cpath%20d%3D%22M13.16%2012.74L14%2014H12.5C12.35%2016.71%2012%2019.41%2011.5%2022.08L10.5%2021.92C11%2019.3%2011.34%2016.66%2011.5%2014H10L10.84%2012.74C8.64%2011.79%207%208.36%207%206C7%204.67392%207.52678%203.40215%208.46447%202.46447C9.40215%201.52678%2010.6739%201%2012%201C12.6566%201%2013.3068%201.12933%2013.9134%201.3806C14.52%201.63188%2015.0712%202.00017%2015.5355%202.46447C15.9998%202.92876%2016.3681%203.47995%2016.6194%204.08658C16.8707%204.69321%2017%205.34339%2017%206C17%208.36%2015.36%2011.79%2013.16%2012.74Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E'); 
   opacity: 0.6;
 }
-.party:hover {
+.partyButton:hover {
   opacity: 1;
 }
+.partyButton.nonReady {
+  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cpath%20d%3D%22M13.16%2012.74L14%2014H12.5C12.35%2016.71%2012%2019.41%2011.5%2022.08L10.5%2021.92C11%2019.3%2011.34%2016.66%2011.5%2014H10L10.84%2012.74C8.64%2011.79%207%208.36%207%206C7%204.67392%207.52678%203.40215%208.46447%202.46447C9.40215%201.52678%2010.6739%201%2012%201C12.6566%201%2013.3068%201.12933%2013.9134%201.3806C14.52%201.63188%2015.0712%202.00017%2015.5355%202.46447C15.9998%202.92876%2016.3681%203.47995%2016.6194%204.08658C16.8707%204.69321%2017%205.34339%2017%206C17%208.36%2015.36%2011.79%2013.16%2012.74Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E'); 
+}
+.partyButton.pause {
+  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cpath%20d%3D%22M14%2019H18V5H14V19ZM6%2019H10V5H6V19Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E%0A');
+}
+.partyButton.play {
+  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cpath%20d%3D%22M8%205.13989V19.1399L19%2012.1399L8%205.13989Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E%0A');
+}
+.partyButton.waiting {
+  background-image: url('data:image/svg+xml;charset=utf8,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Cpath%20d%3D%22M12%204V2C10.6868%202%209.38642%202.25866%208.17317%202.7612C6.95991%203.26375%205.85752%204.00035%204.92893%204.92893C3.05357%206.8043%202%209.34784%202%2012H4C4%209.87827%204.84285%207.84344%206.34315%206.34315C7.84344%204.84285%209.87827%204%2012%204V4Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E%0A');
+  -webkit-animation: 1s linear 0s infinite spin;
+          animation: 1s linear 0s infinite spin;
+}
+@-webkit-keyframes spin { from { transform: rotate(0) } to { transform: rotate(1turn); }  }
+        @keyframes spin { from { transform: rotate(0) } to { transform: rotate(1turn); }  }

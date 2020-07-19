@@ -26,7 +26,7 @@ type ClientStateSpec<T extends ClientStateType> = ClientState & {type: T}
 export type ClientState = ClientStateWithoutArg | ClientStoppedState | ClientSeekingState
 
 type VideoEvent = "play" | "pause" | "seeking" | "seeked"
-type ClientEvent =
+export type ClientEvent =
     | { type: "video", event: VideoEvent }
     | { type: "message", event: ServerMessageEvent }
     | { type: "interaction" }
