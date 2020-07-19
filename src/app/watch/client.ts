@@ -1,6 +1,6 @@
 import { ClientState, reduceState } from "./clientStateReducer"
 import { parseServerMessage } from './messageEvents'
-import { CommandType, commandReady, commandJoin, commandLeave, commandPlay, commandPause, commandSeek, commandSync } from '../../utils/constants'
+import { CommandType, commandReady, commandJoin, commandLeave, commandPlay, commandPause, commandSeek, commandSync, commandResume } from '../../utils/constants'
 
 export class ClientEventEmitter {
     private dispatchQueue: string[] = []
@@ -51,6 +51,9 @@ export class ClientEventEmitter {
     }
     sendSeekWithCurrentTime() {
         this.sendSeek(this.video.currentTime)
+    }
+    sendResume() {
+        this.sendCommand(commandResume)
     }
 
     playVideo() {

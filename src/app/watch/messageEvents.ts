@@ -7,6 +7,7 @@ export const messagePlay = "play"
 export const messagePause = "pause"
 export const messageSeek = "seek"
 export const messageReady = "ready"
+export const messageResume = "resume"
 
 export type ServerMessageEventType =
     | typeof messageOk
@@ -18,6 +19,7 @@ export type ServerMessageEventType =
     | typeof messagePause
     | typeof messageSeek
     | typeof messageReady
+    | typeof messageResume
 
 type ServerMessageEventSync = {
     type: typeof messageSync
@@ -38,6 +40,7 @@ type ServerMessageEventTypeWithOutArg =
     | typeof messageReject
     | typeof messagePause
     | typeof messageReady
+    | typeof messageResume
 
 type ServerMessageEventWithArg =
     | ServerMessageEventSync
@@ -70,6 +73,7 @@ export const parseServerMessage = (message: string): ServerMessageEvent => {
     case messageReject:
     case messagePause:
     case messageReady:
+    case messageResume:
         return { type: messageType }
     }
     throw `invalid message: ${message}`

@@ -1,6 +1,7 @@
 export const commandPlay = "play!"
 export const commandPause = "pause!"
 export const commandSeek = "seek!"
+export const commandResume = "resume!"
 export const commandSync = "sync"
 export const commandJoin = "join"
 export const commandLeave = "leave"
@@ -10,6 +11,7 @@ export type CommandType =
     | typeof commandPlay
     | typeof commandPause
     | typeof commandSeek
+    | typeof commandResume
     | typeof commandSync
     | typeof commandJoin
     | typeof commandLeave
