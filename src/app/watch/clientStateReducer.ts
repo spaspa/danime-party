@@ -19,6 +19,7 @@ type ClientSeekingState = {
     timeDiff: number
     controlled: boolean
     paused: boolean
+    resumeSeen: boolean
 }
 type ClientStateSpec<T extends ClientStateType> = ClientState & {type: T}
 
@@ -88,10 +89,10 @@ const clientReducerMap: ClientReducerMap = {
         }
         if (event.type === "message" && event.event.type === "seek") {
             emitter.seekVideoTo(event.event.videoTime)
-            return { ...state, type: "seeking", controlled: false, paused: false }
+            return { ...state, type: "seeking", controlled: false, paused: false, resumeSeen: false }
         }
         if (event.type === "video" && event.event === "seeking") {
-            return { ...state, type: "seeking", controlled: true, paused: false }
+            return { ...state, type: "seeking", controlled: true, paused: false, resumeSeen: false }
         }
         return state
     },
@@ -115,28 +116,56 @@ const clientReducerMap: ClientReducerMap = {
                 },
                 () => {
                     emitter.seekVideoTo(0) // FIXME put correct time from pause event
-                    return { type: "seeking", timeDiff: state.timeDiff, controlled: false, paused: true }
+                    return {
+                        type: "seeking",
+                        timeDiff: state.timeDiff,
+                        controlled: false,
+                        paused: true,
+                        resumeSeen: false
+                    }
                 }
             )
         }
         if (event.type === "message" && event.event.type === "seek") {
             emitter.seekVideoTo(event.event.videoTime)
-            return { ...state, type: "seeking", controlled: false, paused: true }
+            return { ...state, type: "seeking", controlled: false, paused: true, resumeSeen: false }
         }
         if (event.type === "video" && event.event === "seeking") {
-            return { ...state, type: "seeking", controlled: true, paused: true }
+            return { ...state, type: "seeking", controlled: true, paused: true, resumeSeen: false }
         }
         return state
     },
     seeking (state, event, emitter) {
         if (!state.paused && state.controlled && event.type === "video" && event.event === "seeked") {
+            emitter.pauseVideo()
             emitter.sendSeekWithCurrentTime()
+            return state
+        }
+        if (!state.paused && state.controlled && event.type === "message" && event.event.type === "seek") {
+            const videoTime = event.event.videoTime
+            return emitter.reduceToStateIfVideoTimeIsAround(
+                videoTime,
+                () => state,
+                () => {
+                    emitter.seekVideoTo(videoTime)
+                    return { type: "seeking", timeDiff: state.timeDiff, controlled: false, paused: false, resumeSeen: false }
+                }
+            )
+        }
+        if (!state.paused && state.controlled && event.type === "message" && event.event.type === "resume") {
             emitter.sendReady(true)
             return { type: "ready", timeDiff: state.timeDiff }
         }
         if (!state.paused && !state.controlled && event.type === "video" && event.event=== "seeked") {
+            emitter.pauseVideo()
+            if (!state.resumeSeen) {
+                emitter.sendResume()
+            }
             emitter.sendReady(true)
             return { type: "ready", timeDiff: state.timeDiff }
+        }
+        if (!state.paused && !state.controlled && event.type === "video" && event.event=== "seeked") {
+            return { ...state, resumeSeen: true }
         }
         if (state.paused && state.controlled && event.type === "video" && event.event === "seeked") {
             emitter.sendSeekWithCurrentTime()
