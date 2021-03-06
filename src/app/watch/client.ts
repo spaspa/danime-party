@@ -27,6 +27,12 @@ export class ClientEventEmitter {
         return then()
         // return Math.abs(this.video.currentTime - time) < 0.1 ? then() : otherwise()
     }
+    reduceToStateIfVideoHasEnded(then: () => ClientState, otherwise: () => ClientState) {
+        if (this.video.duration === this.video.currentTime) {
+            return then()
+        }
+        return otherwise()
+    }
 
     sendSync() {
         this.sendCommand(commandSync, ((new Date()).getTime() / 1000).toString())
@@ -90,7 +96,7 @@ export class Client {
     }
 
     setupVideoEvents() {
-        (["play", "pause", "seeking", "seeked"] as const).forEach(e => this.video.addEventListener(e, () => {
+        (["play", "pause", "seeking", "seeked", "loadeddata"] as const).forEach(e => this.video.addEventListener(e, () => {
             console.log('video:', e)
             this.updateStateWith({ type: "video", event: e })
         }))

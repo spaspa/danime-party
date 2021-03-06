@@ -4,7 +4,7 @@ import { ClientEventEmitter } from './client'
 type ClientStateType = ClientStateTypeWithoutArg | ClientStateWithArg["type"]
 type ClientStateTypeWithoutArg = "unsent" | "joined" | "syncing" | "synced" | "ready" | "playing"
 
-type ClientStateWithArg = ClientStoppedState | ClientSeekingState
+type ClientStateWithArg = ClientStoppedState | ClientSeekingState | ClientEndedState
 type ClientStateWithoutArg = {
     type: ClientStateTypeWithoutArg
     timeDiff: number
@@ -21,11 +21,16 @@ type ClientSeekingState = {
     paused: boolean
     resumeSeen: boolean
 }
+type ClientEndedState = {
+    type: "ended"
+    timeDiff: number
+    loaded: boolean
+}
 type ClientStateSpec<T extends ClientStateType> = ClientState & {type: T}
 
-export type ClientState = ClientStateWithoutArg | ClientStoppedState | ClientSeekingState
+export type ClientState = ClientStateWithoutArg | ClientStateWithArg
 
-type VideoEvent = "play" | "pause" | "seeking" | "seeked"
+type VideoEvent = "play" | "pause" | "seeking" | "seeked" | "loadeddata"
 export type ClientEvent =
     | { type: "video", event: VideoEvent }
     | { type: "message", event: ServerMessageEvent }
@@ -84,8 +89,16 @@ const clientReducerMap: ClientReducerMap = {
             return { ...state, type: "stopped", controlled: false }
         }
         if (event.type === "video" && event.event === "pause") {
-            emitter.sendPause()
-            return { ...state, type: "stopped", controlled: true }
+            return emitter.reduceToStateIfVideoHasEnded(
+                () => {
+                    emitter.sendReady(false)
+                    return { ...state, type: "ended", loaded: false }
+                },
+                () => {
+                    emitter.sendPause()
+                    return { ...state, type: "stopped", controlled: true }
+                }
+            )
         }
         if (event.type === "message" && event.event.type === "seek") {
             emitter.seekVideoTo(event.event.videoTime)
@@ -176,6 +189,19 @@ const clientReducerMap: ClientReducerMap = {
         }
         return state
     },
+    ended (state, event, emitter) {
+        if (event.type === "video" && event.event === "loadeddata") {
+            emitter.pauseVideo()
+            emitter.sendReady(true)
+            return { type: "ready", timeDiff: state.timeDiff }
+        }
+        if (state.loaded && event.type === "video" && event.event === "play") {
+            emitter.pauseVideo()
+            emitter.sendReady(true)
+            return { type: "ready", timeDiff: state.timeDiff }
+        }
+        return state
+    }
 }
 export const reduceState = (state: ClientState, event: ClientEvent, emitter: ClientEventEmitter) => {
     const result = clientReducerMap[state.type](state as any, event, emitter) as ClientState
